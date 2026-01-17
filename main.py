@@ -11,6 +11,7 @@ import sys
 import re
 import importlib
 import subprocess
+import signal
 
 AUTO_INSTALL_DEPS = os.environ.get("AUTO_INSTALL_DEPS", "true").strip().lower() not in [
     "false",
@@ -111,6 +112,17 @@ HOME_URL = "https://linux.do/"
 LOGIN_URL = "https://linux.do/login"
 SESSION_URL = "https://linux.do/session"
 CSRF_URL = "https://linux.do/session/csrf"
+
+ACCOUNT_TIMEOUT_WITH_BROWSE = 15 * 60
+ACCOUNT_TIMEOUT_NO_BROWSE = 3 * 60
+
+
+class AccountTimeout(Exception):
+    pass
+
+
+def _timeout_handler(signum, frame):
+    raise AccountTimeout()
 
 
 def split_env_list(value):
@@ -346,8 +358,14 @@ class LinuxDoBrowser:
             logger.info(f"等待 {wait_time:.2f} 秒...")
             time.sleep(wait_time)
 
-    def run(self):
+    def run(self, timeout_seconds=0):
+        timeout_seconds = int(timeout_seconds) if timeout_seconds else 0
+        old_handler = None
         try:
+            if timeout_seconds > 0 and hasattr(signal, "SIGALRM"):
+                old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+                signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
+
             login_res = self.login()
             if not login_res:  # 登录
                 logger.warning("登录验证失败")
@@ -360,7 +378,21 @@ class LinuxDoBrowser:
                 logger.info("完成浏览任务")
 
             self.send_notifications(BROWSE_ENABLED)  # 发送通知
+        except AccountTimeout:
+            logger.warning(
+                f"账号 {self.display_name} 运行超时 {timeout_seconds} 秒，跳过后续步骤"
+            )
         finally:
+            if timeout_seconds > 0 and hasattr(signal, "SIGALRM"):
+                try:
+                    signal.setitimer(signal.ITIMER_REAL, 0)
+                except Exception:
+                    pass
+                if old_handler is not None:
+                    try:
+                        signal.signal(signal.SIGALRM, old_handler)
+                    except Exception:
+                        pass
             try:
                 self.page.close()
             except Exception:
@@ -459,8 +491,15 @@ if __name__ == "__main__":
     if not accounts:
         print("Please set LINUXDO_ACCOUNTS or LINUXDO_USERNAME/LINUXDO_PASSWORD")
         exit(1)
+    account_timeout = (
+        ACCOUNT_TIMEOUT_WITH_BROWSE
+        if BROWSE_ENABLED
+        else ACCOUNT_TIMEOUT_NO_BROWSE
+    )
     total = len(accounts)
     for idx, (username, password) in enumerate(accounts, start=1):
-        logger.info(f"开始处理账号 {idx}/{total}: {mask_account(username)}")
+        logger.info(
+            f"开始处理账号 {idx}/{total}: {mask_account(username)}，限时 {account_timeout // 60} 分钟"
+        )
         l = LinuxDoBrowser(username, password)
-        l.run()
+        l.run(account_timeout)

@@ -16,6 +16,7 @@
 - (可选)`Telegram`通知功能，推送获取签到结果（目前只支持GitHub Actions方式）。
 - (可选)`Gotify`通知功能，推送获取签到结果。
 - (可选)`Server酱³`通知功能，推送获取签到结果。
+- 单账号默认限时：开启浏览 15 分钟，关闭浏览 3 分钟。
 ## 环境变量配置
 
 ### 必填变量
@@ -56,12 +57,13 @@ LINUXDO_ACCOUNTS="user1:pass1;user2:pass2"
 
 ### GitHub Actions 自动运行
 
-此项目的 GitHub Actions 配置会自动每天运行2次签到脚本。你无需进行任何操作即可启动此自动化任务。GitHub Actions 的工作流文件位于 `.github/workflows` 目录下，文件名为 `daily-check-in.yml`。
+此项目的 GitHub Actions 配置会自动每天北京时间 10:00 运行签到脚本。你无需进行任何操作即可启动此自动化任务。GitHub Actions 的工作流文件位于 `.github/workflows` 目录下，文件名为 `linuxdo-daily.yml`。
 
 #### 配置步骤
 
 1. **设置环境变量**：
     - 在 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中添加以下变量：
+        - `LINUXDO_ACCOUNTS`：多账户（推荐），格式 `user1:pass1;user2:pass2`
         - `LINUXDO_USERNAME`：你的 LinuxDo 用户名或邮箱。
         - `LINUXDO_PASSWORD`：你的 LinuxDo 密码。
         - (可选) `BROWSE_ENABLED`：是否启用浏览帖子，`true` 或 `false`，默认为 `true`。
