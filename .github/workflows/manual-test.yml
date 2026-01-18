@@ -35,6 +35,7 @@ jobs:
           LINUXDO_PASSWORD: ${{ secrets.LINUXDO_PASSWORD }}
           LINUXDO_UA: ${{ secrets.LINUXDO_UA }}
           BROWSE_ENABLED: ${{ inputs.browse_enabled }}
+          BROWSE_MAX_TOPICS: "1"
           GOTIFY_URL: ${{ secrets.GOTIFY_URL }}
           GOTIFY_TOKEN: ${{ secrets.GOTIFY_TOKEN }}
           SC3_PUSH_KEY: ${{ secrets.SC3_PUSH_KEY }}
