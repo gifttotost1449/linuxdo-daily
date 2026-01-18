@@ -79,6 +79,7 @@ LINUXDO_UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
         - `LINUXDO_USERNAME`：你的 LinuxDo 用户名或邮箱。
         - `LINUXDO_PASSWORD`：你的 LinuxDo 密码。
         - (可选) `BROWSE_ENABLED`：是否启用浏览帖子，`true` 或 `false`，默认为 `true`。
+        - (可选) `LINUXDO_UA`：多账号 UA 列表（按顺序对应）。
         - (可选) `GOTIFY_URL` 和 `GOTIFY_TOKEN`。
         - (可选) `SC3_PUSH_KEY`。
         - (可选) `TELEGRAM_TOKEN` 和 `TELEGRAM_USERID`。

@@ -520,6 +520,7 @@ if __name__ == "__main__":
         print("Please set LINUXDO_ACCOUNTS or LINUXDO_USERNAME/LINUXDO_PASSWORD")
         exit(1)
     ua_list = split_ua_list(LINUXDO_UA)
+    logger.info(f"检测到 UA 配置数量：{len(ua_list)}")
     if ua_list and len(ua_list) != len(accounts):
         logger.warning(
             f"LINUXDO_UA 数量({len(ua_list)})与账号数量({len(accounts)})不一致，"
