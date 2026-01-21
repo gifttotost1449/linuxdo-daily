@@ -216,12 +216,20 @@ def parse_accounts():
 
 
 class LinuxDoBrowser:
-    def __init__(self, username, password, user_agent=None, browse_max_topics=10) -> None:
+    def __init__(
+        self,
+        username,
+        password,
+        user_agent=None,
+        browse_max_topics=10,
+        login_retry_max=3,
+    ) -> None:
         self.username = username
         self.password = password
         self.display_name = mask_account(username)
         self.custom_user_agent = user_agent
         self.browse_max_topics = browse_max_topics
+        self.login_retry_max = max(1, int(login_retry_max))
 
         browser_ua = self.custom_user_agent or DEFAULT_USER_AGENT
         request_ua = self.custom_user_agent or DEFAULT_USER_AGENT
@@ -412,11 +420,25 @@ class LinuxDoBrowser:
                 old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
                 signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
 
-            login_res = self.login()
-            if not login_res:  # 登录
-                logger.warning("登录验证失败，跳过浏览任务")
-            else:
-                logger.info("登录验证成功")
+            login_res = False
+            for attempt in range(1, self.login_retry_max + 1):
+                try:
+                    login_res = self.login()
+                except Exception as exc:
+                    login_res = False
+                    logger.error(f"登录异常: {exc}")
+                if login_res:
+                    logger.info("登录验证成功")
+                    break
+                if attempt < self.login_retry_max:
+                    logger.warning(
+                        f"登录失败，准备重试 {attempt + 1}/{self.login_retry_max}"
+                    )
+                    time.sleep(2)
+            if not login_res:
+                logger.warning(
+                    f"账号 {self.display_name} 登录失败已达上限 {self.login_retry_max} 次，跳过浏览任务"
+                )
 
             browse_res = None
             if BROWSE_ENABLED and login_res:
@@ -569,6 +591,10 @@ if __name__ == "__main__":
         if BROWSE_ENABLED
         else ACCOUNT_TIMEOUT_NO_BROWSE
     )
+    login_retry_max = parse_int_env("LOGIN_RETRY_MAX", 3)
+    if login_retry_max == 0:
+        logger.warning("LOGIN_RETRY_MAX 为 0，将按 1 次尝试处理")
+        login_retry_max = 1
     total = len(accounts)
     logger.info(
         f"检测到 {total} 个账号，浏览任务："
@@ -577,6 +603,7 @@ if __name__ == "__main__":
     )
     if BROWSE_ENABLED:
         logger.info(f"浏览帖子上限：{browse_max_topics} 个")
+    logger.info(f"登录失败重试上限：{login_retry_max} 次")
     for idx, (username, password) in enumerate(accounts, start=1):
         user_agent = ua_list[idx - 1] if idx - 1 < len(ua_list) else None
         logger.info(
@@ -588,6 +615,7 @@ if __name__ == "__main__":
                 password,
                 user_agent=user_agent,
                 browse_max_topics=browse_max_topics,
+                login_retry_max=login_retry_max,
             )
             l.run(account_timeout)
         except Exception:
